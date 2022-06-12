@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
+	"github.com/toddnguyen47/splith1headers/pkg/iteratetree"
 )
 
 type splitStruct struct {
@@ -33,7 +34,7 @@ func (s *splitStruct) Split(inputFile string) {
 	}
 
 	// Find body as root element
-	bodyElem := iterateTreeToFindImage(&doc.Element, "body", []string{"", "body"}, 0)
+	bodyElem := iteratetree.IterateToFindTag(&doc.Element, "body", []string{"", "body"}, 0)
 
 	// Recursively parse elements
 	for _, childElem := range bodyElem.ChildElements() {
@@ -58,7 +59,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		}
 	} else if strings.EqualFold("div", elemToAppend.Tag) {
 		// Select image
-		imageElem := iterateTreeToFindImage(elemToAppend, "image", []string{"sup, image"}, 0)
+		imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"sup, image"}, 0)
 		if imageElem != nil {
 			newElem := etree.NewElement("img")
 			newAttr := etree.Attr{
@@ -76,7 +77,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 					s.reverseMap["#"+supId.Value] = s.index
 				}
 
-				aElem := iterateTreeToFindImage(childElem, "a", []string{"sup", "a"}, 0)
+				aElem := iteratetree.IterateToFindTag(childElem, "a", []string{"sup", "a"}, 0)
 				attr := aElem.SelectAttr(constants.href)
 				if strings.Contains(attr.Value, "cite_note") {
 					attr.Value = fmt.Sprintf("Notes.xhtml%s", attr.Value)
@@ -88,7 +89,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		// For each <li> element
 		for _, childElem := range elemToAppend.ChildElements() {
 			if strings.EqualFold("li", childElem.Tag) {
-				aElem := iterateTreeToFindImage(childElem, "a", []string{"li", "span", "a"}, 0)
+				aElem := iteratetree.IterateToFindTag(childElem, "a", []string{"li", "span", "a"}, 0)
 				attr := aElem.SelectAttr(constants.href)
 				if index, ok := s.reverseMap[attr.Value]; ok {
 					attr.Value = fmt.Sprintf("%s%s", s.getFileName(index), attr.Value)
@@ -144,21 +145,4 @@ func (s *splitStruct) getFileName(index int) string {
 		fileName = fmt.Sprintf("%s.xhtml", constants.notes)
 	}
 	return fileName
-}
-
-func iterateTreeToFindImage(root *etree.Element, finalTag string, tags []string,
-	curIndex int) *etree.Element {
-	if curIndex >= len(tags) || strings.EqualFold(finalTag, tags[curIndex]) {
-		return root
-	}
-
-	var elem *etree.Element
-	for _, childElem := range root.ChildElements() {
-		elem = iterateTreeToFindImage(childElem, finalTag, tags, curIndex+1)
-		if elem != nil {
-			break
-		}
-	}
-
-	return elem
 }
