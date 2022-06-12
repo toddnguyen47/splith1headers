@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v0.1.1-a
+## v0.1.2
 
 - fix some bugs with `splith1headers` when trying to find images
 
