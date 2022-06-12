@@ -30,11 +30,10 @@ func (s *splitStruct) Split(inputFile string) {
 	doc := etree.NewDocument()
 	err := doc.ReadFromFile(inputFile)
 	if err != nil {
-		panic("ERROR reading from file")
+		panic(fmt.Sprintf("ERROR reading from file: %v", err))
 	}
 
-	// Find body as root element
-	bodyElem := iteratetree.IterateToFindTag(&doc.Element, "body", []string{"", "body"}, 0)
+	bodyElem := iteratetree.IterateToFindTag(&doc.Element, "body", []string{"", "html", "body"}, 0)
 
 	// Recursively parse elements
 	for _, childElem := range bodyElem.ChildElements() {
@@ -111,11 +110,11 @@ func (s *splitStruct) writeToFiles() {
 	fmt.Printf("Map: %v\n", s.reverseMap)
 	err := os.RemoveAll(constants.outputFolder)
 	if err != nil {
-		panic("ERROR while removing folder: " + constants.outputFolder)
+		panic(fmt.Sprintf("ERROR while removing folder: %s. Error: %v", constants.outputFolder, err))
 	}
 	err = os.Mkdir(constants.outputFolder, os.ModeDir)
 	if err != nil {
-		panic("ERROR while making folder: " + constants.outputFolder)
+		panic(fmt.Sprintf("ERROR while making folder: %s. Error: %v", constants.outputFolder, err))
 	}
 
 	for i, xmlInFile := range s.elems {
@@ -132,7 +131,7 @@ func (s *splitStruct) writeToFiles() {
 		fmt.Println("Writing to file " + fullFileName)
 		err := newDoc.WriteToFile(fullFileName)
 		if err != nil {
-			panic("ERROR writing to file " + fullFileName)
+			panic(fmt.Sprintf("ERROR writing to file %s. Error: %v", fullFileName, err))
 		}
 	}
 }
