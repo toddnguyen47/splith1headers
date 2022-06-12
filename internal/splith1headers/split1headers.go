@@ -9,18 +9,6 @@ import (
 	"github.com/beevik/etree"
 )
 
-var constants = struct {
-	baseFileName string
-	outputFolder string
-	notes        string
-	href         string
-}{
-	baseFileName: "Body",
-	outputFolder: "output",
-	notes:        "Notes",
-	href:         "href",
-}
-
 type splitStruct struct {
 	elems           [][]*etree.Element
 	index           int
@@ -41,11 +29,14 @@ func (s *splitStruct) Split(inputFile string) {
 	doc := etree.NewDocument()
 	err := doc.ReadFromFile(inputFile)
 	if err != nil {
-		fmt.Println("ERROR reading from file")
+		panic("ERROR reading from file")
 	}
 
+	// Find body as root element
+	bodyElem := iterateTreeToFindImage(&doc.Element, "body", []string{"", "body"}, 0)
+
 	// Recursively parse elements
-	for _, childElem := range doc.Element.ChildElements() {
+	for _, childElem := range bodyElem.ChildElements() {
 		s.parseTree(childElem)
 	}
 	s.writeToFiles()
@@ -67,14 +58,16 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		}
 	} else if strings.EqualFold("div", elemToAppend.Tag) {
 		// Select image
-		imageElem := elemToAppend.FindElement("//svg/image")
-		newElem := etree.NewElement("img")
-		newAttr := etree.Attr{
-			Key:   "src",
-			Value: imageElem.SelectAttrValue(constants.href, ""),
+		imageElem := iterateTreeToFindImage(elemToAppend, "image", []string{"sup, image"}, 0)
+		if imageElem != nil {
+			newElem := etree.NewElement("img")
+			newAttr := etree.Attr{
+				Key:   "src",
+				Value: imageElem.SelectAttrValue(constants.href, ""),
+			}
+			newElem.Attr = append(newElem.Attr, newAttr)
+			elemToAppend = newElem
 		}
-		newElem.Attr = append(newElem.Attr, newAttr)
-		elemToAppend = newElem
 	} else if strings.EqualFold("p", elemToAppend.Tag) {
 		for _, childElem := range elemToAppend.ChildElements() {
 			if strings.EqualFold(childElem.Tag, "sup") {
@@ -83,7 +76,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 					s.reverseMap["#"+supId.Value] = s.index
 				}
 
-				aElem := childElem.FindElement("//sup/a")
+				aElem := iterateTreeToFindImage(childElem, "a", []string{"sup", "a"}, 0)
 				attr := aElem.SelectAttr(constants.href)
 				if strings.Contains(attr.Value, "cite_note") {
 					attr.Value = fmt.Sprintf("Notes.xhtml%s", attr.Value)
@@ -95,7 +88,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		// For each <li> element
 		for _, childElem := range elemToAppend.ChildElements() {
 			if strings.EqualFold("li", childElem.Tag) {
-				aElem := childElem.FindElement("//li/span/a")
+				aElem := iterateTreeToFindImage(childElem, "a", []string{"li", "span", "a"}, 0)
 				attr := aElem.SelectAttr(constants.href)
 				if index, ok := s.reverseMap[attr.Value]; ok {
 					attr.Value = fmt.Sprintf("%s%s", s.getFileName(index), attr.Value)
@@ -115,7 +108,15 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 
 func (s *splitStruct) writeToFiles() {
 	fmt.Printf("Map: %v\n", s.reverseMap)
-	os.Mkdir(constants.outputFolder, os.ModeDir)
+	err := os.RemoveAll(constants.outputFolder)
+	if err != nil {
+		panic("ERROR while removing folder: " + constants.outputFolder)
+	}
+	err = os.Mkdir(constants.outputFolder, os.ModeDir)
+	if err != nil {
+		panic("ERROR while making folder: " + constants.outputFolder)
+	}
+
 	for i, xmlInFile := range s.elems {
 		fileName := s.getFileName(i)
 		fullFileName := path.Join(constants.outputFolder, fileName)
@@ -130,7 +131,7 @@ func (s *splitStruct) writeToFiles() {
 		fmt.Println("Writing to file " + fullFileName)
 		err := newDoc.WriteToFile(fullFileName)
 		if err != nil {
-			fmt.Println("ERROR writing to file " + fullFileName)
+			panic("ERROR writing to file " + fullFileName)
 		}
 	}
 }
@@ -143,4 +144,21 @@ func (s *splitStruct) getFileName(index int) string {
 		fileName = fmt.Sprintf("%s.xhtml", constants.notes)
 	}
 	return fileName
+}
+
+func iterateTreeToFindImage(root *etree.Element, finalTag string, tags []string,
+	curIndex int) *etree.Element {
+	if curIndex >= len(tags) || strings.EqualFold(finalTag, tags[curIndex]) {
+		return root
+	}
+
+	var elem *etree.Element
+	for _, childElem := range root.ChildElements() {
+		elem = iterateTreeToFindImage(childElem, finalTag, tags, curIndex+1)
+		if elem != nil {
+			break
+		}
+	}
+
+	return elem
 }
