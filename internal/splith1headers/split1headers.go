@@ -58,7 +58,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		}
 	} else if strings.EqualFold("div", elemToAppend.Tag) {
 		// Select image
-		imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"sup, image"}, 0)
+		imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"div", "svg", "image"}, 0)
 		if imageElem != nil {
 			newElem := etree.NewElement("img")
 			newAttr := etree.Attr{
