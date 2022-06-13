@@ -100,7 +100,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 		}
 	}
 
-	if len(s.elems[s.index]) >= constants.maxElemsPerFile {
+	if constants.maxElemsPerFile > 0 && len(s.elems[s.index]) >= constants.maxElemsPerFile {
 		// Too many paragraphs! Advance to the next file
 		s.elems = append(s.elems, make([]*etree.Element, 0))
 		s.index = len(s.elems) - 1
@@ -129,6 +129,7 @@ func (s *splitStruct) writeToFiles() {
 		fileName := s.getFileName(i)
 		fullFileName := path.Join(constants.outputFolder, fileName)
 		rootElem := etree.NewElement("div")
+		rootElem.CreateAttr("xmlns", "http://www.w3.org/1999/xhtml")
 		for _, xmlElem := range xmlInFile {
 			rootElem.AddChild(xmlElem)
 		}

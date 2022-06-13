@@ -5,6 +5,7 @@ var constants = struct {
 	outputFolder      string
 	notes             string
 	href              string
+	// Set `maxElemsPerFile` to -1 to have no limit
 	maxElemsPerFile   int
 	primaryHeadersMap map[string]struct{}
 }{
@@ -12,7 +13,7 @@ var constants = struct {
 	outputFolder:    "output",
 	notes:           "Notes",
 	href:            "href",
-	maxElemsPerFile: 500,
+	maxElemsPerFile: -1,
 	primaryHeadersMap: map[string]struct{}{
 		"h1": {},
 		"h2": {},

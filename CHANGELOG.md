@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.4
+
+- Add `xmlns="http://www.w3.org/1999/xhtml"` in main div
+- Add option to turn off limits for xml elements per file
+
 ## v0.1.3
 
 - Set a limit on 500 xml elements per file
