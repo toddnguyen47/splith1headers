@@ -45,8 +45,9 @@ func (s *splitStruct) Split(inputFile string) {
 func (s *splitStruct) parseTree(root *etree.Element) {
 
 	elemToAppend := root
+	elemTag := strings.ToLower(elemToAppend.Tag)
 	// If h1, advance to the next file
-	if strings.EqualFold(elemToAppend.Tag, "h1") {
+	if _, isHeader := constants.primaryHeadersMap[elemTag]; isHeader {
 		s.elems = append(s.elems, make([]*etree.Element, 0))
 		s.index = len(s.elems) - 1
 		// If notes
@@ -56,7 +57,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 				s.hasNotesSection = true
 			}
 		}
-	} else if strings.EqualFold("div", elemToAppend.Tag) {
+	} else if strings.EqualFold("div", elemTag) {
 		// Select image
 		imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"div", "svg", "image"}, 0)
 		if imageElem != nil {
@@ -68,7 +69,8 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 			newElem.Attr = append(newElem.Attr, newAttr)
 			elemToAppend = newElem
 		}
-	} else if strings.EqualFold("p", elemToAppend.Tag) {
+	} else if strings.EqualFold("p", elemTag) {
+		// Fix `cite_note` <sup> superscript text
 		for _, childElem := range elemToAppend.ChildElements() {
 			if strings.EqualFold(childElem.Tag, "sup") {
 				supId := childElem.SelectAttr("id")
@@ -84,7 +86,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 				aElem.CreateAttr(constants.href, attr.Value)
 			}
 		}
-	} else if strings.EqualFold("ol", elemToAppend.Tag) {
+	} else if strings.EqualFold("ol", elemTag) {
 		// For each <li> element
 		for _, childElem := range elemToAppend.ChildElements() {
 			if strings.EqualFold("li", childElem.Tag) {
@@ -96,6 +98,12 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 				}
 			}
 		}
+	}
+
+	if len(s.elems[s.index]) >= constants.maxElemsPerFile {
+		// Too many paragraphs! Advance to the next file
+		s.elems = append(s.elems, make([]*etree.Element, 0))
+		s.index = len(s.elems) - 1
 	}
 
 	s.elems[s.index] = append(s.elems[s.index], elemToAppend)
