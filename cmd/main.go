@@ -6,5 +6,6 @@ func main() {
 	inputFile := "C:/Common/Desktop/Body.xhtml"
 
 	splitHeaderStruct := splith1headers.NewSplitStruct()
-	splitHeaderStruct.Split(inputFile)
+	splitImages := true
+	splitHeaderStruct.Split(inputFile, splitImages)
 }

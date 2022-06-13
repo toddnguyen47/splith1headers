@@ -5,7 +5,7 @@ import (
 	"github.com/toddnguyen47/splith1headers/pkg/iteratetree"
 )
 
-func (s *splitStruct) handleImages(elemToAppend *etree.Element) *etree.Element {
+func (s *splitStruct) handleImages(elemToAppend *etree.Element, splitImages bool) *etree.Element {
 	imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"div", "svg", "image"}, 0)
 	if imageElem != nil {
 		newElem := etree.NewElement("img")
@@ -16,7 +16,9 @@ func (s *splitStruct) handleImages(elemToAppend *etree.Element) *etree.Element {
 		newElem.Attr = append(newElem.Attr, newAttr)
 		elemToAppend = newElem
 
-		s.makeNewXmlList()
+		if splitImages {
+			s.makeNewXmlList()
+		}
 	}
 	return elemToAppend
 }

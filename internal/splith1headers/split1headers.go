@@ -27,7 +27,12 @@ func NewSplitStruct() splitStruct {
 	}
 }
 
-func (s *splitStruct) Split(inputFile string) {
+// Split - split files into separate h1 headers.
+//
+// PARAMETERS
+// inputFile - the path of the inputFile
+// splitImages - true if you want images to be in its own xhtml file, false otherwise
+func (s *splitStruct) Split(inputFile string, splitImages bool) {
 	doc := etree.NewDocument()
 	err := doc.ReadFromFile(inputFile)
 	if err != nil {
@@ -38,18 +43,18 @@ func (s *splitStruct) Split(inputFile string) {
 
 	// Recursively parse elements
 	for _, childElem := range bodyElem.ChildElements() {
-		s.parseTree(childElem)
+		s.parseTree(childElem, splitImages)
 	}
 	s.writeToFiles()
 }
 
-func (s *splitStruct) parseTree(root *etree.Element) {
+func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
 
 	elemToAppend := root
 	elemTag := strings.ToLower(elemToAppend.Tag)
 
 	// If last tag was an img, make a new page
-	if s.stack.Len() > 0 {
+	if splitImages && s.stack.Len() > 0 {
 		tailElem := s.stack.Back()
 		val := tailElem.Value.(string)
 		if strings.EqualFold(val, "img") {
@@ -61,7 +66,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 	if _, isHeader := constants.primaryHeadersMap[elemTag]; isHeader {
 		s.handleHeaders(elemToAppend)
 	} else if strings.EqualFold("div", elemTag) {
-		elemToAppend = s.handleImages(elemToAppend)
+		elemToAppend = s.handleImages(elemToAppend, splitImages)
 	} else if strings.EqualFold("p", elemTag) {
 		s.handleCiteNote(elemToAppend)
 	} else if strings.EqualFold("ol", elemTag) {
@@ -78,7 +83,7 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 
 	// Recursively parse elements
 	// for _, childElem := range root.ChildElements() {
-	// 	s.parseTree(childElem)
+	// 	s.parseTree(childElem, splitImages)
 	// }
 }
 
