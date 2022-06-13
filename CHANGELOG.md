@@ -3,7 +3,8 @@
 ## v0.1.4
 
 - Add `xmlns="http://www.w3.org/1999/xhtml"` in main div
-- Add option to turn off limits for xml elements per file
+- Add image as their own `xhtml` file
+- Refactored files for neater code
 
 ## v0.1.3
 

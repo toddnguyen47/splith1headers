@@ -1,9 +1,8 @@
 package splith1headers
 
 import (
+	"container/list"
 	"fmt"
-	"os"
-	"path"
 	"strings"
 
 	"github.com/beevik/etree"
@@ -15,6 +14,7 @@ type splitStruct struct {
 	index           int
 	hasNotesSection bool
 	reverseMap      map[string]int
+	stack           *list.List
 }
 
 func NewSplitStruct() splitStruct {
@@ -23,6 +23,7 @@ func NewSplitStruct() splitStruct {
 		index:           0,
 		hasNotesSection: false,
 		reverseMap:      make(map[string]int),
+		stack:           list.New(),
 	}
 }
 
@@ -46,65 +47,32 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 
 	elemToAppend := root
 	elemTag := strings.ToLower(elemToAppend.Tag)
+
+	// If last tag was an img, make a new page
+	if s.stack.Len() > 0 {
+		tailElem := s.stack.Back()
+		val := tailElem.Value.(string)
+		if strings.EqualFold(val, "img") {
+			s.makeNewXmlList()
+		}
+	}
+
 	// If h1, advance to the next file
 	if _, isHeader := constants.primaryHeadersMap[elemTag]; isHeader {
-		s.elems = append(s.elems, make([]*etree.Element, 0))
-		s.index = len(s.elems) - 1
-		// If notes
-		attributes := elemToAppend.Attr
-		for _, attribute := range attributes {
-			if strings.EqualFold(attribute.Key, "id") && strings.EqualFold(attribute.Value, constants.notes) {
-				s.hasNotesSection = true
-			}
-		}
+		s.handleHeaders(elemToAppend)
 	} else if strings.EqualFold("div", elemTag) {
-		// Select image
-		imageElem := iteratetree.IterateToFindTag(elemToAppend, "image", []string{"div", "svg", "image"}, 0)
-		if imageElem != nil {
-			newElem := etree.NewElement("img")
-			newAttr := etree.Attr{
-				Key:   "src",
-				Value: imageElem.SelectAttrValue(constants.href, ""),
-			}
-			newElem.Attr = append(newElem.Attr, newAttr)
-			elemToAppend = newElem
-		}
+		elemToAppend = s.handleImages(elemToAppend)
 	} else if strings.EqualFold("p", elemTag) {
-		// Fix `cite_note` <sup> superscript text
-		for _, childElem := range elemToAppend.ChildElements() {
-			if strings.EqualFold(childElem.Tag, "sup") {
-				supId := childElem.SelectAttr("id")
-				if supId != nil {
-					s.reverseMap["#"+supId.Value] = s.index
-				}
-
-				aElem := iteratetree.IterateToFindTag(childElem, "a", []string{"sup", "a"}, 0)
-				attr := aElem.SelectAttr(constants.href)
-				if strings.Contains(attr.Value, "cite_note") {
-					attr.Value = fmt.Sprintf("Notes.xhtml%s", attr.Value)
-				}
-				aElem.CreateAttr(constants.href, attr.Value)
-			}
-		}
+		s.handleCiteNote(elemToAppend)
 	} else if strings.EqualFold("ol", elemTag) {
-		// For each <li> element
-		for _, childElem := range elemToAppend.ChildElements() {
-			if strings.EqualFold("li", childElem.Tag) {
-				aElem := iteratetree.IterateToFindTag(childElem, "a", []string{"li", "span", "a"}, 0)
-				attr := aElem.SelectAttr(constants.href)
-				if index, ok := s.reverseMap[attr.Value]; ok {
-					attr.Value = fmt.Sprintf("%s%s", s.getFileName(index), attr.Value)
-					aElem.CreateAttr(constants.href, attr.Value)
-				}
-			}
-		}
+		s.handleLists(elemToAppend)
 	}
 
-	if constants.maxElemsPerFile > 0 && len(s.elems[s.index]) >= constants.maxElemsPerFile {
-		// Too many paragraphs! Advance to the next file
-		s.elems = append(s.elems, make([]*etree.Element, 0))
-		s.index = len(s.elems) - 1
+	// Pop last element and push this element
+	if tailElem := s.stack.Back(); tailElem != nil {
+		s.stack.Remove(tailElem)
 	}
+	s.stack.PushBack(elemToAppend.Tag)
 
 	s.elems[s.index] = append(s.elems[s.index], elemToAppend)
 
@@ -114,35 +82,9 @@ func (s *splitStruct) parseTree(root *etree.Element) {
 	// }
 }
 
-func (s *splitStruct) writeToFiles() {
-	fmt.Printf("Map: %v\n", s.reverseMap)
-	err := os.RemoveAll(constants.outputFolder)
-	if err != nil {
-		panic(fmt.Sprintf("ERROR while removing folder: %s. Error: %v", constants.outputFolder, err))
-	}
-	err = os.Mkdir(constants.outputFolder, os.ModeDir)
-	if err != nil {
-		panic(fmt.Sprintf("ERROR while making folder: %s. Error: %v", constants.outputFolder, err))
-	}
-
-	for i, xmlInFile := range s.elems {
-		fileName := s.getFileName(i)
-		fullFileName := path.Join(constants.outputFolder, fileName)
-		rootElem := etree.NewElement("div")
-		rootElem.CreateAttr("xmlns", "http://www.w3.org/1999/xhtml")
-		for _, xmlElem := range xmlInFile {
-			rootElem.AddChild(xmlElem)
-		}
-		newDoc := etree.NewDocument()
-		newDoc.SetRoot(rootElem)
-		newDoc.Indent(2)
-
-		fmt.Println("Writing to file " + fullFileName)
-		err := newDoc.WriteToFile(fullFileName)
-		if err != nil {
-			panic(fmt.Sprintf("ERROR writing to file %s. Error: %v", fullFileName, err))
-		}
-	}
+func (s *splitStruct) makeNewXmlList() {
+	s.elems = append(s.elems, make([]*etree.Element, 0))
+	s.index = len(s.elems) - 1
 }
 
 func (s *splitStruct) getFileName(index int) string {
