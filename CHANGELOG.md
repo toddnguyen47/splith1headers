@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.1.5
+
+- Make "notes" section detection more robust
+
 ## v0.1.4
 
 - Add `xmlns="http://www.w3.org/1999/xhtml"` in main div

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/beevik/etree"
 )
@@ -20,17 +21,27 @@ func (s *splitStruct) writeToFiles() {
 	}
 
 	for i, xmlInFile := range s.elems {
-		fileName := s.getFileName(i)
-		fullFileName := path.Join(constants.outputFolder, fileName)
+		isNotesSection := false
 		rootElem := etree.NewElement("div")
 		rootElem.CreateAttr("xmlns", "http://www.w3.org/1999/xhtml")
 		for _, xmlElem := range xmlInFile {
 			rootElem.AddChild(xmlElem)
+			if strings.EqualFold(xmlElem.Tag, "ol") && !isNotesSection {
+				notesFound := xmlElem.FindElement("//ol/li/span[@class='mw-cite-backlink']")
+				if notesFound != nil {
+					isNotesSection = true
+				}
+			}
 		}
 		newDoc := etree.NewDocument()
 		newDoc.SetRoot(rootElem)
 		newDoc.Indent(2)
 
+		fileName := s.getFileName(i)
+		fullFileName := path.Join(constants.outputFolder, fileName)
+		if isNotesSection {
+			fullFileName = path.Join(constants.outputFolder, constants.notes+".xhtml")
+		}
 		fmt.Println("Writing to file " + fullFileName)
 		err := newDoc.WriteToFile(fullFileName)
 		if err != nil {

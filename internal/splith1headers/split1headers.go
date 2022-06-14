@@ -10,20 +10,18 @@ import (
 )
 
 type splitStruct struct {
-	elems           [][]*etree.Element
-	index           int
-	hasNotesSection bool
-	reverseMap      map[string]int
-	stack           *list.List
+	elems      [][]*etree.Element
+	index      int
+	reverseMap map[string]int
+	stack      *list.List
 }
 
 func NewSplitStruct() splitStruct {
 	return splitStruct{
-		elems:           make([][]*etree.Element, 0),
-		index:           0,
-		hasNotesSection: false,
-		reverseMap:      make(map[string]int),
-		stack:           list.New(),
+		elems:      make([][]*etree.Element, 0),
+		index:      0,
+		reverseMap: make(map[string]int),
+		stack:      list.New(),
 	}
 }
 
@@ -33,6 +31,7 @@ func NewSplitStruct() splitStruct {
 // inputFile - the path of the inputFile
 // splitImages - true if you want images to be in its own xhtml file, false otherwise
 func (s *splitStruct) Split(inputFile string, splitImages bool) {
+	fmt.Printf("INIT Split() with inputFile: `%s`, splitImages: `%t`\n", inputFile, splitImages)
 	doc := etree.NewDocument()
 	err := doc.ReadFromFile(inputFile)
 	if err != nil {
@@ -46,6 +45,8 @@ func (s *splitStruct) Split(inputFile string, splitImages bool) {
 		s.parseTree(childElem, splitImages)
 	}
 	s.writeToFiles()
+
+	fmt.Printf("END Split() with inputFile: `%s`, splitImages: `%t`\n", inputFile, splitImages)
 }
 
 func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
@@ -64,7 +65,7 @@ func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
 
 	// If h1, advance to the next file
 	if _, isHeader := constants.primaryHeadersMap[elemTag]; isHeader {
-		s.handleHeaders(elemToAppend)
+		s.makeNewXmlList()
 	} else if strings.EqualFold("div", elemTag) {
 		elemToAppend = s.handleImages(elemToAppend, splitImages)
 	} else if strings.EqualFold("p", elemTag) {
@@ -94,10 +95,5 @@ func (s *splitStruct) makeNewXmlList() {
 
 func (s *splitStruct) getFileName(index int) string {
 	fileName := fmt.Sprintf("%s%02d.xhtml", constants.baseFileName, index)
-
-	// If last file and file has notes
-	if index == len(s.elems)-1 && s.hasNotesSection {
-		fileName = fmt.Sprintf("%s.xhtml", constants.notes)
-	}
 	return fileName
 }
