@@ -14,6 +14,7 @@ type splitStruct struct {
 	index      int
 	reverseMap map[string]int
 	stack      *list.List
+	header     *etree.Element
 }
 
 func NewSplitStruct() splitStruct {
@@ -22,6 +23,7 @@ func NewSplitStruct() splitStruct {
 		index:      0,
 		reverseMap: make(map[string]int),
 		stack:      list.New(),
+		header:     etree.NewElement("head"),
 	}
 }
 
@@ -38,6 +40,7 @@ func (s *splitStruct) Split(inputFile string, splitImages bool) {
 		panic(fmt.Sprintf("ERROR reading from file: %v", err))
 	}
 
+	s.header = iteratetree.IterateToFindTag(&doc.Element, "head", []string{"", "html", "head"}, 0)
 	bodyElem := iteratetree.IterateToFindTag(&doc.Element, "body", []string{"", "html", "body"}, 0)
 
 	// Recursively parse elements
@@ -63,8 +66,8 @@ func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
 		}
 	}
 
-	// If h1, advance to the next file
 	if _, isHeader := constants.primaryHeadersMap[elemTag]; isHeader {
+		// If h1/h2/h3, advance to the next file
 		s.makeNewXmlList()
 	} else if strings.EqualFold("div", elemTag) {
 		elemToAppend = s.handleImages(elemToAppend, splitImages)
@@ -80,6 +83,9 @@ func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
 	}
 	s.stack.PushBack(elemToAppend.Tag)
 
+	if s.index >= len(s.elems) {
+		panic("ERROR! Most likely, no header elements were found")
+	}
 	s.elems[s.index] = append(s.elems[s.index], elemToAppend)
 
 	// Recursively parse elements
