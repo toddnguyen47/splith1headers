@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.3.0
+
+- Use command line arguments instead of hard coding variables in Go
+
 ## v0.2.0
 
 - Include `<html>` and `<header>` elements so we can add to Calibre easier.

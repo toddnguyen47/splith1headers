@@ -1,11 +1,14 @@
 package main
 
-import "github.com/toddnguyen47/splith1headers/internal/splith1headers"
+import (
+	"github.com/toddnguyen47/splith1headers/internal/cmdlineflags"
+	"github.com/toddnguyen47/splith1headers/internal/splith1headers"
+)
 
 func main() {
-	inputFile := "C:/Common/Desktop/Body.xhtml"
+
+	inputFile, splitImages := cmdlineflags.ParseCommandLineFlags()
 
 	splitHeaderStruct := splith1headers.NewSplitStruct()
-	splitImages := true
-	splitHeaderStruct.Split(inputFile, splitImages)
+	splitHeaderStruct.Split(*inputFile, *splitImages)
 }

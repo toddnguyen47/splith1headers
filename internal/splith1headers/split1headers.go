@@ -84,7 +84,7 @@ func (s *splitStruct) parseTree(root *etree.Element, splitImages bool) {
 	s.stack.PushBack(elemToAppend.Tag)
 
 	if s.index >= len(s.elems) {
-		panic("ERROR! Most likely, no header elements were found")
+		s.makeNewXmlList()
 	}
 	s.elems[s.index] = append(s.elems[s.index], elemToAppend)
 
