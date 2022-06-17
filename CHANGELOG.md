@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.3.1
+
+- Use wrapper struct for `FlagsRead`
+
 ## v0.3.0
 
 - Use command line arguments instead of hard coding variables in Go

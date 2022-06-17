@@ -7,8 +7,8 @@ import (
 
 func main() {
 
-	inputFile, splitImages := cmdlineflags.ParseCommandLineFlags()
+	flagsRead := cmdlineflags.ParseCommandLineFlags()
 
 	splitHeaderStruct := splith1headers.NewSplitStruct()
-	splitHeaderStruct.Split(*inputFile, *splitImages)
+	splitHeaderStruct.Split(flagsRead.BookPath, flagsRead.SplitImages)
 }

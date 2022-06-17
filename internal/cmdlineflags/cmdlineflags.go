@@ -4,7 +4,15 @@ import (
 	"flag"
 )
 
-func ParseCommandLineFlags() (*string, *bool) {
+// FlagsRead - Wrapper for command line flags read
+type FlagsRead struct {
+	// Full XML path
+	BookPath string
+	// Whether to split images into their own xhtml file
+	SplitImages bool
+}
+
+func ParseCommandLineFlags() FlagsRead {
 	bookPath := flag.String("bookPath", "", "Full path of .xhtml file")
 	splitImages := flag.Bool("splitImages", true, "Whether to split images into their own xhtml file")
 	flag.Parse()
@@ -17,5 +25,8 @@ func ParseCommandLineFlags() (*string, *bool) {
 		panic("Please supply a `splitImages` value")
 	}
 
-	return bookPath, splitImages
+	return FlagsRead{
+		BookPath:    *bookPath,
+		SplitImages: *splitImages,
+	}
 }
