@@ -43,8 +43,23 @@ func FixImage(inputFile string, firstOutput bool) {
 	newBody := etree.NewElement("body")
 	queue := list.New()
 	for _, childElem := range bodyElem.ChildElements() {
-		parseTree(childElem, bodyElem, queue)
-		newBody.AddChild(childElem)
+		parentsQueue := list.New()
+		parseTree(childElem, parentsQueue, queue)
+
+		frontNode := parentsQueue.Front()
+		len1 := parentsQueue.Len()
+
+		var node *list.Element
+		for i := 0; i < len1-1; i++ {
+			node = parentsQueue.Front()
+			elem := node.Value.(*etree.Element)
+			next := node.Next()
+			elem.AddChild(next.Value.(*etree.Element))
+			node = next
+		}
+
+		newBody.AddChild(frontNode.Value.(*etree.Element))
+
 		for elem := queue.Front(); elem != nil; elem = elem.Next() {
 			elemTree := elem.Value.(*etree.Element)
 			newBody.AddChild(elemTree)
@@ -57,7 +72,7 @@ func FixImage(inputFile string, firstOutput bool) {
 	fmt.Printf("END FixImage() with inputFile: `%s`\n", inputFile)
 }
 
-func parseTree(root *etree.Element, parent *etree.Element, queue *list.List) {
+func parseTree(root *etree.Element, parentsQueue *list.List, queue *list.List) {
 
 	// If element is an image
 	if strings.EqualFold("image", root.Tag) {
@@ -69,11 +84,38 @@ func parseTree(root *etree.Element, parent *etree.Element, queue *list.List) {
 		})
 		queue.PushBack(newElem)
 
-		// Remove element from parent
-		parent.RemoveChild(root)
+		// Remove <image> element from parent
+		lastParent := parentsQueue.Back().Value.(*etree.Element)
+		lastParent.RemoveChild(root)
+
+		repopulateQueue(parentsQueue)
 	}
+
+	parentsQueue.PushBack(root)
 	// Recursively parse elements
 	for _, childElem := range root.ChildElements() {
-		parseTree(childElem, root, queue)
+		parseTree(childElem, parentsQueue, queue)
+	}
+}
+
+func repopulateQueue(parentsQueue *list.List) {
+	// For every parent, remove all attributes
+	newQueue := list.New()
+
+	for parentsQueue.Len() > 0 {
+		node := parentsQueue.Front()
+		parentsQueue.Remove(node)
+
+		elem := node.Value.(*etree.Element)
+		elem.CreateAttr("class", "hidden")
+		elem.Child = make([]etree.Token, 0)
+		newQueue.PushBack(elem)
+	}
+
+	// Pop back in!
+	for newQueue.Len() > 0 {
+		node := newQueue.Front()
+		newQueue.Remove(node)
+		parentsQueue.PushBack(node.Value)
 	}
 }
