@@ -38,31 +38,18 @@ func FixImage(inputFile string, firstOutput bool) {
 
 	header := iteratetree.IterateToFindTag(&doc.Element, "head", []string{"", "html", "head"}, 0)
 	bodyElem := iteratetree.IterateToFindTag(&doc.Element, "body", []string{"", "html", "body"}, 0)
-
-	// Recursively parse elements
 	newBody := etree.NewElement("body")
 	queue := list.New()
+
 	for _, childElem := range bodyElem.ChildElements() {
-		parentsQueue := list.New()
-		parseTree(childElem, parentsQueue, queue)
+		// Recursively parse elements
+		parseTree(childElem, bodyElem, queue)
+		newBody.AddChild(childElem)
 
-		frontNode := parentsQueue.Front()
-		len1 := parentsQueue.Len()
-
-		var node *list.Element
-		for i := 0; i < len1-1; i++ {
-			node = parentsQueue.Front()
-			elem := node.Value.(*etree.Element)
-			next := node.Next()
-			elem.AddChild(next.Value.(*etree.Element))
-			node = next
-		}
-
-		newBody.AddChild(frontNode.Value.(*etree.Element))
-
-		for elem := queue.Front(); elem != nil; elem = elem.Next() {
-			elemTree := elem.Value.(*etree.Element)
-			newBody.AddChild(elemTree)
+		for queue.Len() > 0 {
+			node := queue.Front()
+			queue.Remove(node)
+			newBody.AddChild(node.Value.(*etree.Element))
 		}
 	}
 
@@ -72,7 +59,7 @@ func FixImage(inputFile string, firstOutput bool) {
 	fmt.Printf("END FixImage() with inputFile: `%s`\n", inputFile)
 }
 
-func parseTree(root *etree.Element, parentsQueue *list.List, queue *list.List) {
+func parseTree(root *etree.Element, parent *etree.Element, queue *list.List) {
 
 	// If element is an image
 	if strings.EqualFold("image", root.Tag) {
@@ -85,37 +72,16 @@ func parseTree(root *etree.Element, parentsQueue *list.List, queue *list.List) {
 		queue.PushBack(newElem)
 
 		// Remove <image> element from parent
-		lastParent := parentsQueue.Back().Value.(*etree.Element)
-		lastParent.RemoveChild(root)
-
-		repopulateQueue(parentsQueue)
+		parent.RemoveChild(root)
 	}
 
-	parentsQueue.PushBack(root)
 	// Recursively parse elements
 	for _, childElem := range root.ChildElements() {
-		parseTree(childElem, parentsQueue, queue)
-	}
-}
-
-func repopulateQueue(parentsQueue *list.List) {
-	// For every parent, remove all attributes
-	newQueue := list.New()
-
-	for parentsQueue.Len() > 0 {
-		node := parentsQueue.Front()
-		parentsQueue.Remove(node)
-
-		elem := node.Value.(*etree.Element)
-		elem.CreateAttr("class", "hidden")
-		elem.Child = make([]etree.Token, 0)
-		newQueue.PushBack(elem)
+		parseTree(childElem, root, queue)
 	}
 
-	// Pop back in!
-	for newQueue.Len() > 0 {
-		node := newQueue.Front()
-		newQueue.Remove(node)
-		parentsQueue.PushBack(node.Value)
+	// If queue is not empty, add "hidden" to current element
+	if queue.Len() > 0 {
+		root.CreateAttr("class", "hidden")
 	}
 }
