@@ -81,7 +81,7 @@ func parseTree(root *etree.Element, parent *etree.Element, queue *list.List) {
 	}
 
 	// If queue is not empty, add "hidden" to current element
-	if queue.Len() > 0 {
+	if queue.Len() > 0 && !strings.EqualFold("body", root.Tag) {
 		root.CreateAttr("class", "hidden")
 	}
 }
